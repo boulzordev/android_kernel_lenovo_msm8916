@@ -236,9 +236,12 @@ size_t get_user_cal_type_size(int32_t cal_type)
 		size = 0;
 	case AUDIO_CORE_METAINFO_CAL_TYPE:
 		size = sizeof(struct audio_cal_type_metainfo);
+<<<<<<< HEAD
 		break;
 	case SRS_TRUMEDIA_CAL_TYPE:
 		size = 0;
+=======
+>>>>>>> d4785f7... ASoC: msm: metaInfo support in acdb kernel driver
 		break;
 	default:
 		pr_err("%s:Invalid cal type %d!",
