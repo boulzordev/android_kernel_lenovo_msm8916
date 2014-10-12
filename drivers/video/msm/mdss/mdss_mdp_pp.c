@@ -36,7 +36,8 @@ struct mdp_csc_cfg mdp_csc_convert[MDSS_MDP_MAX_CSC] = {
 		{ 0x10, 0xeb, 0x10, 0xf0, 0x10, 0xf0,},
 		{ 0x0, 0xff, 0x0, 0xff, 0x0, 0xff,},
 		},
-		[MDSS_MDP_CSC_YUV2RGB_601FR] = {
+	},
+	[MDSS_MDP_CSC_YUV2RGB_601FR] = {
 		0,
 		{
 			0x0200, 0x0000, 0x02ce,
@@ -83,7 +84,7 @@ struct mdp_csc_cfg mdp_csc_convert[MDSS_MDP_MAX_CSC] = {
 		{ 0x0000, 0x0080, 0x0080,},
 		{ 0x0, 0xff, 0x0, 0xff, 0x0, 0xff,},
 		{ 0x0, 0xff, 0x0, 0xff, 0x0, 0xff,},
-		},
+	},
 	[MDSS_MDP_CSC_RGB2YUV_709L] = {
 		0,
 		{
@@ -919,9 +920,9 @@ static int pp_vig_pipe_setup(struct mdss_mdp_pipe *pipe, u32 *op)
 						MDP_CSC_FLAG_YUV_OUT) << 19;
 
 			mdss_mdp_csc_setup_data(
-			    MDSS_MDP_BLOCK_SSPP,
-			    pipe->num,
-			    &pipe->pp_cfg.csc_cfg);
+				MDSS_MDP_BLOCK_SSPP,
+				pipe->num,
+				&pipe->pp_cfg.csc_cfg);
 
 	} else {
 		if (pipe->src_fmt->is_yuv) {
