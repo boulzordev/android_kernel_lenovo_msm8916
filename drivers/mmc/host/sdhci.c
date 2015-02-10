@@ -1518,6 +1518,9 @@ static void sdhci_pm_qos_remove_work(struct work_struct *work)
 	if (unlikely(!host_qos[vote].cpu_dma_latency_us))
 		return;
 
+	if (unlikely(host->last_qos_policy == -EINVAL))
+		WARN_ONCE(1, "Invalid qos policy (%d)\n",
+				host->last_qos_policy);
 
 	pm_qos_update_request(&(host_qos[vote].pm_qos_req_dma),
 				PM_QOS_DEFAULT_VALUE);
