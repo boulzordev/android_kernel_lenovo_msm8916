@@ -1487,6 +1487,8 @@ static int msm_ds2_dap_set_param(u32 cmd, void *arg)
 		/* cache the parameters */
 		ds2_dap_params[cdev].dap_params_modified[idx] += 1;
 		for (j = 0; j <  dolby_data->length; j++) {
+
+			off = ds2_dap_params_offset[idx];
 			if (get_user(data, &dolby_data->data[j])) {
 				pr_debug("%s:error getting data\n", __func__);
 				rc = -EFAULT;
