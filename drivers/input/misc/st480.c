@@ -932,7 +932,7 @@ static ssize_t st480_selftest(struct device *dev,
 
 static DEVICE_ATTR(name, S_IRUGO, st480_name_show, NULL);
 static DEVICE_ATTR(vendor, S_IRUGO, st480_vendor_show, NULL);
-static DEVICE_ATTR(selftest, 0666, st480_selftest, NULL);
+static DEVICE_ATTR(selftest, 0444, st480_selftest, NULL);
 
 static struct device_attribute *sensor_attrs[] = {
 	&dev_attr_name,
