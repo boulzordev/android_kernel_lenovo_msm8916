@@ -75,6 +75,14 @@ int __init setup_androidboot_radio_init(char *s)
 }
 __setup("androidboot.radio=", setup_androidboot_radio_init);
 
+static char mdss_panel[MDSS_PANEL_MAX_LEN];
+int __init mdss_panel_init(char *s)
+{
+	strlcpy(mdss_panel, s, MDSS_PANEL_MAX_LEN);
+	return 1;
+}
+__setup("mdss_mdp.panel=", mdss_panel_init);
+
 static struct mmi_unit_info *mui;
 void mmi_set_pureason(uint32_t val)
 {
@@ -164,6 +172,7 @@ static int __init mmi_unit_info_init(void)
 	strlcpy(mui_copy->baseband, extended_baseband, BASEBAND_MAX_LEN);
 	strlcpy(mui_copy->carrier, carrier, CARRIER_MAX_LEN);
 	strlcpy(mui_copy->device, androidboot_device, DEVICE_MAX_LEN);
+	strlcpy(mui_copy->panel, mdss_panel, MDSS_PANEL_MAX_LEN);
 	mui_copy->radio = androidboot_radio;
 	mui_copy->powerup_reason = bi_powerup_reason();
 
@@ -171,13 +180,13 @@ static int __init mmi_unit_info_init(void)
 		" device = '%s', radio = %d, system_rev = 0x%04x,"
 		" system_serial = 0x%08x%08x, machine = '%s',"
 		" barcode = '%s', baseband = '%s', carrier = '%s'"
-		" pu_reason = 0x%08x\n",
+		" mdss_panel = '%s', pu_reason = 0x%08x\n",
 		mui_copy->version,
 		mui_copy->device, mui_copy->radio, mui_copy->system_rev,
 		mui_copy->system_serial_high, mui_copy->system_serial_low,
 		mui_copy->machine, mui_copy->barcode,
 		mui_copy->baseband, mui_copy->carrier,
-		mui_copy->powerup_reason);
+		mui_copy->panel, mui_copy->powerup_reason);
 
 	mui = (struct mmi_unit_info *) smem_alloc(SMEM_KERNEL_RESERVE,
 		SMEM_KERNEL_RESERVE_SIZE, 0, SMEM_ANY_HOST_FLAG);
