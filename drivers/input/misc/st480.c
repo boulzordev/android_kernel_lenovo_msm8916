@@ -799,18 +799,6 @@ static int st480_single_measure_mode_bist(void)
 	return 0;
 }
 
-static ssize_t st480_vendor_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
-{
-	return snprintf(buf, PAGE_SIZE, "%s\n", VENDOR_NAME);
-}
-
-static ssize_t st480_name_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
-{
-	return snprintf(buf, PAGE_SIZE, "%s\n", MODULE_NAME);
-}
-
 static ssize_t st480_selftest(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -930,13 +918,9 @@ static ssize_t st480_selftest(struct device *dev,
 	return sprintf(buf, "%s\n", result);  
 }
 
-static DEVICE_ATTR(name, S_IRUGO, st480_name_show, NULL);
-static DEVICE_ATTR(vendor, S_IRUGO, st480_vendor_show, NULL);
 static DEVICE_ATTR(selftest, 0444, st480_selftest, NULL);
 
 static struct device_attribute *sensor_attrs[] = {
-	&dev_attr_name,
-	&dev_attr_vendor,
 	&dev_attr_selftest,
 	NULL,
 };
@@ -1008,7 +992,7 @@ static int st480_probe(struct i2c_client *client, const struct i2c_device_id *id
 	}
 
 	/* Declare input device */
-	st480->input_dev = input_allocate_device();
+	st480->input_dev = devm_input_allocate_device(&client->dev);
 	if (!st480->input_dev) {
 		err = -ENOMEM;
 		dev_err(&client->dev, "failed to allocate input device\n");
@@ -1024,6 +1008,8 @@ static int st480_probe(struct i2c_client *client, const struct i2c_device_id *id
 	input_set_abs_params(st480->input_dev, ABS_Y, ABSMIN_MAG, ABSMAX_MAG, 0, 0);
 	/* z-axis of raw magnetic vector (-32768, 32767) */
 	input_set_abs_params(st480->input_dev, ABS_Z, ABSMIN_MAG, ABSMAX_MAG, 0, 0);
+	st480->input_dev->dev.parent = &client->dev;
+
 	/* Set name */
 	st480->input_dev->name = "compass";
 	st480->input_dev->id.bustype = BUS_I2C;
@@ -1035,11 +1021,7 @@ static int st480_probe(struct i2c_client *client, const struct i2c_device_id *id
 		goto exit4;
 	}
 
-	err = misc_register(&st480_device);
-	if (err) {
-		dev_err(&client->dev, "SENODIA st480_probe: st480_device register failed\n");
-		goto exit5;
-	}
+    set_sensor_attr(&st480->input_dev->dev, sensor_attrs);
 
 	rwlock_init(&st480->lock);
 	/* As default, report all information */
@@ -1051,45 +1033,33 @@ static int st480_probe(struct i2c_client *client, const struct i2c_device_id *id
 	st480->cdev = sensors_cdev;
 	st480->cdev.sensors_enable = st480_cdev_set_enable;
 	st480->cdev.sensors_poll_delay = st480_cdev_set_poll_delay;
-	err = sensors_classdev_register(&client->dev, &st480->cdev);
+	err = sensors_classdev_register(&st480->input_dev->dev, &st480->cdev);
 	if (err) {
 		dev_err(&client->dev, "sensors class register failed!\n");
-		goto exit6;
-	}
-
-	st480->st480_class = class_create(THIS_MODULE, "st480");
-	if (IS_ERR(st480->st480_class)) {
-		pr_err("%s, create st480_class is failed.(err=%ld)\n",
-				__func__, IS_ERR(st480->st480_class));
-		goto exit7;
-	}
-
-	err = sensors_register(st480->st480_class, st480->factory_device, st480, 
-				sensor_attrs, MODULE_NAME);
-	if (err) {
-		pr_err("%s, failed to sensors_register (%d)\n", 
-			__func__, err);
-		goto exit8;
+		goto exit5;
 	}
 
 #if ST480_AUTO_TEST
 	thread=kthread_run(auto_test_read,NULL,"st480_read_test");
 #endif
 
+	err = misc_register(&st480_device);
+	if (err) {
+		dev_err(&client->dev, "SENODIA st480_probe: st480_device register failed\n");
+		goto exit6;
+	}
+
+
+
 	hardwareinfo_set_prop(HARDWARE_MAGNETOMETER,"st480");
 
 	printk("st480 probe done.");
 	return 0;
-
-exit8:
-	class_destroy(st480->st480_class);
-exit7:
 exit6:
 	misc_deregister(&st480_device);
 exit5:
 	input_unregister_device(st480->input_dev);
 exit4:
-	input_free_device(st480->input_dev);
 exit3:
 exit2:
 	hrtimer_cancel(&st480->mag_timer);
@@ -1113,7 +1083,9 @@ static int st480_remove(struct i2c_client *client)
 	cancel_delayed_work(&st480->work);
 	i2c_set_clientdata(client, NULL);
 	class_destroy(st480->st480_class);
+#if 0
 	sensors_unregister(st480->factory_device, sensor_attrs);
+#endif
 	hrtimer_cancel(&st480->mag_timer);
 	kthread_stop(st480->mag_task);
 	kfree(st480);
