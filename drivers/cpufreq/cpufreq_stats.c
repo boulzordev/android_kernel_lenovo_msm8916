@@ -573,7 +573,7 @@ static void cpufreq_allstats_create(unsigned int cpu,
 static int cpufreq_stat_notifier_policy(struct notifier_block *nb,
 		unsigned long val, void *data)
 {
-	int ret = 0, count = 0, i;
+	int ret, count = 0, i;
 	struct cpufreq_policy *policy = data;
 	struct cpufreq_frequency_table *table;
 	unsigned int cpu = policy->cpu;
@@ -712,13 +712,11 @@ static int __init cpufreq_stats_init(void)
 	}
 
 	create_all_freq_table();
-	ret = sysfs_create_file(cpufreq_global_kobject,
-				&_attr_all_time_in_state.attr);
+	ret = cpufreq_sysfs_create_file(&_attr_all_time_in_state.attr);
 	if (ret)
 		pr_warn("Cannot create sysfs file for cpufreq stats\n");
 
-	ret = sysfs_create_file(cpufreq_global_kobject,
-				&_attr_current_in_state.attr);
+	ret = cpufreq_sysfs_create_file(&_attr_current_in_state.attr);
 	if (ret)
 		pr_warn("Cannot create sysfs file for cpufreq current stats\n");
 
