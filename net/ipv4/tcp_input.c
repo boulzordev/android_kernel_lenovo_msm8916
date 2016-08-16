@@ -3296,6 +3296,7 @@ static void tcp_send_challenge_ack(struct sock *sk)
 		u32 half = (sysctl_tcp_challenge_ack_limit + 1) >> 1;
 
 		challenge_timestamp = now;
+
 		ACCESS_ONCE(challenge_count) =  half +
 			   reciprocal_divide(prandom_u32(),
 				sysctl_tcp_challenge_ack_limit);
