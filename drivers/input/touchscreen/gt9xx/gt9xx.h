@@ -59,7 +59,7 @@ struct goodix_ts_platform_data {
 	bool force_update;
 	bool i2c_pull_up;
 	bool enable_power_off;
-	size_t config_data_len[GOODIX_MAX_CFG_GROUP];
+	int config_data_len[GOODIX_MAX_CFG_GROUP];
 	u8 *config_data[GOODIX_MAX_CFG_GROUP];
 	u32 button_map[MAX_BUTTONS];
 	u8 num_button;
