@@ -124,6 +124,20 @@ config ARM64_DMA_USE_IOMMU
 	select ARM_HAS_SG_CHAIN
 	select NEED_SG_DMA_LENGTH
 
+config MMI_LENOVO_K5_DTB
+    depends on ARCH_MSM8916
+    default n
+    bool "Lenovo A6020 Device DTBs"
+    help
+      Only include Lenovo A6020 specific DTBs to limit the number that
+      get built during kernel compilation.
+
+      A6020 is a Lenovo device that uses MSM8916 chipset, which uses the
+      MSM8916 defconfig.  Due to its many revisions, adding all of the device
+      trees will consume at least 1MB of space.
+
+      If unsure, say 'n'.
+
 if ARM64_DMA_USE_IOMMU
 
 config ARM64_DMA_IOMMU_ALIGNMENT
