@@ -22,18 +22,33 @@
 #include <linux/module.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/err.h>
+#include <linux/timer.h>
+#include "leds.h"
+#define LED_RED_FLAG 0x4
+#define LED_GREEN_FLAG 0x2
+#define LED_BLUE_FLAG 0x1
 
 struct gpio_led_data {
 	struct led_classdev cdev;
 	unsigned gpio;
 	struct work_struct work;
+        struct mutex led_lock;
 	u8 new_level;
 	u8 can_sleep;
 	u8 active_low;
 	u8 blinking;
+        u8 global_blinking;
+        u8 brightness;
 	int (*platform_gpio_blink_set)(unsigned gpio, int state,
 			unsigned long *delay_on, unsigned long *delay_off);
 };
+/*led light flag: r:4, g:2, b:1*/
+static int led_flag = 0;
+unsigned long delay_on = 500;
+unsigned long delay_off = 300;
+#if defined (WT_USE_FAN54015)
+extern int fan54015_getcharge_stat(void);
+#endif
 
 static void gpio_led_work(struct work_struct *work)
 {
@@ -56,6 +71,22 @@ static void gpio_led_set(struct led_classdev *led_cdev,
 		container_of(led_cdev, struct gpio_led_data, cdev);
 	int level;
 
+	if(!strcmp(led_cdev->name, "red") && led_dat->blinking == 0) {
+		if(led_flag & LED_GREEN_FLAG) {
+			/*green is light, so return*/
+			return;
+		} else {
+			if(value == LED_OFF)
+				led_flag &= ~LED_RED_FLAG;
+			else
+				led_flag |= LED_RED_FLAG;
+		}
+	} else if(!strcmp(led_cdev->name, "green") && led_dat->blinking == 0) {
+		if(value == LED_OFF)
+			led_flag &= ~LED_GREEN_FLAG;
+		else
+			led_flag |= LED_GREEN_FLAG;
+	}
 	if (value == LED_OFF)
 		level = 0;
 	else
@@ -80,7 +111,55 @@ static void gpio_led_set(struct led_classdev *led_cdev,
 			gpio_set_value(led_dat->gpio, level);
 	}
 }
+static ssize_t blink_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct led_classdev *led_cdev = dev_get_drvdata(dev);	
+	struct gpio_led_data *led_dat =
+		container_of(led_cdev, struct gpio_led_data, cdev);
+	return sprintf(buf, "%d\n", led_dat->global_blinking);
+}
 
+
+static ssize_t blink_store(struct device *dev,
+	struct device_attribute *attr,
+	const char *buf, size_t count)
+{
+	unsigned long blinking;
+        int level;
+	struct led_classdev *led_cdev = dev_get_drvdata(dev);
+	ssize_t ret = -EINVAL;
+        struct gpio_led_data *led_dat =
+		container_of(led_cdev, struct gpio_led_data, cdev);
+	ret = kstrtoul(buf, 10, &blinking);
+	if (ret)
+		return ret;
+        led_dat->brightness = blinking? 255 : 0;
+        led_dat->blinking=blinking;
+        if(!strcmp(led_cdev->name, "red")) {
+		if(led_dat->blinking == 0)
+			level = 1;
+		else
+			level = 0;
+	} else if(!strcmp(led_cdev->name, "green")) {
+		if(led_dat->blinking == 0)
+			level = 0;
+		else
+			level = 1;
+               
+	}
+	if (led_dat->blinking) {
+			led_blink_set(led_cdev,&delay_on,&delay_off);
+                        led_dat->global_blinking=1;
+                        led_dat->blinking = 0;
+		} else{
+                        del_timer_sync(&led_cdev->blink_timer);
+			gpio_set_value(led_dat->gpio, level);
+                        led_dat->global_blinking=0;
+          }
+	return count;
+}
+static DEVICE_ATTR(blink, 0664,blink_show, blink_store);
 static int gpio_blink_set(struct led_classdev *led_cdev,
 	unsigned long *delay_on, unsigned long *delay_off)
 {
@@ -97,6 +176,9 @@ static int create_gpio_led(const struct gpio_led *template,
 	int (*blink_set)(unsigned, int, unsigned long *, unsigned long *))
 {
 	int ret, state;
+#if defined (WT_USE_FAN54015)
+	int chg_status;
+#endif
 
 	led_dat->gpio = -1;
 
@@ -106,7 +188,6 @@ static int create_gpio_led(const struct gpio_led *template,
 				template->gpio, template->name);
 		return 0;
 	}
-
 	ret = devm_gpio_request(parent, template->gpio, template->name);
 	if (ret < 0)
 		return ret;
@@ -124,19 +205,31 @@ static int create_gpio_led(const struct gpio_led *template,
 	led_dat->cdev.brightness_set = gpio_led_set;
 	if (template->default_state == LEDS_GPIO_DEFSTATE_KEEP)
 		state = !!gpio_get_value_cansleep(led_dat->gpio) ^ led_dat->active_low;
-	else
+	else 
 		state = (template->default_state == LEDS_GPIO_DEFSTATE_ON);
 	led_dat->cdev.brightness = state ? LED_FULL : LED_OFF;
 	if (!template->retain_state_suspended)
 		led_dat->cdev.flags |= LED_CORE_SUSPENDRESUME;
-
-	ret = gpio_direction_output(led_dat->gpio, led_dat->active_low ^ state);
+        led_dat->cdev.blink_delay_on = 2000;
+        led_dat->cdev.blink_delay_off = 1000;
+#if defined (WT_USE_FAN54015)
+	chg_status = fan54015_getcharge_stat();
+	if(!strcmp(template->name, "red")) {
+		if( (chg_status & 0x1) != 0x1) {
+			ret = gpio_direction_output(led_dat->gpio, led_dat->active_low ^ state);
+			if (ret < 0)
+				return ret;
+		}
+	}
+#else
+	ret = gpio_direction_output(led_dat->gpio,0);
 	if (ret < 0)
 		return ret;
-
+#endif
 	INIT_WORK(&led_dat->work, gpio_led_work);
 
 	ret = led_classdev_register(parent, &led_dat->cdev);
+        device_create_file(led_dat->cdev.dev, &dev_attr_blink);
 	if (ret < 0)
 		return ret;
 
@@ -272,7 +365,6 @@ static int gpio_led_probe(struct platform_device *pdev)
 		if (IS_ERR(priv))
 			return PTR_ERR(priv);
 	}
-
 	platform_set_drvdata(pdev, priv);
 
 	return 0;
