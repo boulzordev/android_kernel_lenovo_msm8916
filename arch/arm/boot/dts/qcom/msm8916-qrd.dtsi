@@ -123,6 +123,7 @@
 	status = "ok";
 };
 
+/* mask sdhc_2 config ,move sdhc_2 config to skul&skum dtsi by shenyong 2015.01.24
 &sdhc_2 {
 	vdd-supply = <&pm8916_l11>;
 	qcom,vdd-voltage-level = <2800000 2950000>;
@@ -148,14 +149,14 @@
 	cd-gpios = <&msm_gpio 38 0x0>;
 
 	status = "ok";
-};
+};*/
 
 &spmi_bus {
 	qcom,pm8916@1 {
 		qcom,vibrator@c000 {
 			status = "okay";
 			qcom,vib-timeout-ms = <15000>;
-			qcom,vib-vtg-level-mV = <3100>;
+			qcom,vib-vtg-level-mV = <3000>;
 		};
 	};
 };
