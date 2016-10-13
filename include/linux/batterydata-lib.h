@@ -24,7 +24,7 @@
 #define PC_TEMP_ROWS		31
 #define PC_TEMP_COLS		8
 
-#define ACC_IBAT_ROWS		4
+#define ACC_IBAT_ROWS		6   //Other_platform_modify 20150912 huangfusheng.wt change array size 
 #define ACC_TEMP_COLS		3
 
 #define MAX_SINGLE_LUT_COLS	20
