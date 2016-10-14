@@ -15,7 +15,7 @@
 #include <linux/of_gpio.h>
 #include <linux/platform_device.h>
 #include <linux/device.h>
-#include <linux/printk.h>
+#include <linux/pr_debug.h>
 #include <linux/ratelimit.h>
 #include <linux/list.h>
 #include <linux/bitops.h>
@@ -701,6 +701,7 @@ static void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 			 jack_type, mbhc->hph_status);
 		wcd_mbhc_jack_report(mbhc, &mbhc->headset_jack,
 				mbhc->hph_status, WCD_MBHC_JACK_MASK);
+		msm8x16_wcd_codec_set_headset_state(mbhc->hph_status);
 		wcd_mbhc_set_and_turnoff_hph_padac(mbhc);
 		hphrocp_off_report(mbhc, SND_JACK_OC_HPHR);
 		hphlocp_off_report(mbhc, SND_JACK_OC_HPHL);
@@ -770,6 +771,7 @@ static void wcd_mbhc_report_plug(struct wcd_mbhc *mbhc, int insertion,
 		wcd_mbhc_jack_report(mbhc, &mbhc->headset_jack,
 				    mbhc->hph_status, WCD_MBHC_JACK_MASK);
 		wcd_mbhc_clr_and_turnon_hph_padac(mbhc);
+		msm8x16_wcd_codec_set_headset_state(mbhc->hph_status);
 	}
 	pr_debug("%s: leave hph_status %x\n", __func__, mbhc->hph_status);
 }
@@ -1165,8 +1167,12 @@ static void wcd_mbhc_detect_plug_type(struct wcd_mbhc *mbhc)
 	bool micbias1;
 	bool cross_conn;
 	int try = 0;
+	int times = 0;
+	int i = 0;
+	bool is_pa_on;
 
 	pr_debug("%s: enter\n", __func__);
+retry:
 	WCD_MBHC_RSC_ASSERT_LOCKED(mbhc);
 	micbias1 = (snd_soc_read(codec, MSM8X16_WCD_A_ANALOG_MICB_1_EN) & 0x80);
 	if (mbhc->mbhc_cb && mbhc->mbhc_cb->set_cap_mode)
@@ -1179,8 +1185,24 @@ static void wcd_mbhc_detect_plug_type(struct wcd_mbhc *mbhc)
 	 */
 	mbhc->is_btn_press = false;
 	WCD_MBHC_RSC_UNLOCK(mbhc);
+	for (i = 0; i < 3; i++) {
+		WCD_MBHC_RSC_LOCK(mbhc);
+		mbhc->is_btn_press = false;
+		snd_soc_update_bits(codec,
+			MSM8X16_WCD_A_ANALOG_MBHC_FSM_CTL,
+			0x80, 0x00);
+		snd_soc_update_bits(codec,
+			MSM8X16_WCD_A_ANALOG_MBHC_FSM_CTL,
+			0x80, 0x80);
+		WCD_MBHC_RSC_UNLOCK(mbhc);
 	timeout_result = wait_event_interruptible_timeout(mbhc->wait_btn_press,
 			mbhc->is_btn_press, timeout);
+		if (timeout_result) {
+			pr_debug("%s:debug is headphone\n", __func__);
+		} else {
+			pr_debug("%s:debug is headset\n", __func__);
+		}
+	}
 
 	WCD_MBHC_RSC_LOCK(mbhc);
 	result1 = snd_soc_read(codec, MSM8X16_WCD_A_ANALOG_MBHC_BTN_RESULT);
@@ -1194,9 +1216,13 @@ static void wcd_mbhc_detect_plug_type(struct wcd_mbhc *mbhc)
 		 * Micbias and schmitt trigger (HPHL-HPHR)
 		 * needs to be enabled.
 		 */
+
+		is_pa_on = snd_soc_read(codec,
+			MSM8X16_WCD_A_ANALOG_RX_HPH_CNP_EN) &
+			0x30;
 		pr_debug("%s: result1 %x, result2 %x\n", __func__,
 						result1, result2);
-		if (!(result2 & 0x01)) {
+		if ((!(result2 & 0x01)) && (!is_pa_on)) {
 			/*
 			 * Cross connection result is not reliable
 			 * so do check for it for 4 times to conclude
@@ -1237,10 +1263,20 @@ static void wcd_mbhc_detect_plug_type(struct wcd_mbhc *mbhc)
 		}
 	}
 exit:
+	if(plug_type == MBHC_PLUG_TYPE_GND_MIC_SWAP && times == 0)
+	{
+			times = 1;
+			snd_soc_update_bits(codec,MSM8X16_WCD_A_ANALOG_MBHC_FSM_CTL,
+					0x80, 0x0);
+			usleep(5*1000);
+			pr_err("plug_type is MBHC_PLUG_TYPE_GND_MIC_SWAP,retry again\n");
+			goto retry;
+	}
 	pr_debug("%s: Valid plug found, plug type is %d\n",
 			 __func__, plug_type);
 	if (plug_type == MBHC_PLUG_TYPE_HEADSET ||
 			plug_type == MBHC_PLUG_TYPE_HEADPHONE) {
+			
 		wcd_mbhc_find_plug_and_report(mbhc, plug_type);
 		wcd_schedule_hs_detect_plug(mbhc, &mbhc->correct_plug_swch);
 	} else {
@@ -1278,6 +1314,12 @@ static void wcd_mbhc_swch_irq_handler(struct wcd_mbhc *mbhc)
 	micbias1 = (snd_soc_read(codec, MSM8X16_WCD_A_ANALOG_MICB_1_EN) & 0x80);
 	if ((mbhc->current_plug == MBHC_PLUG_TYPE_NONE) &&
 	    detection_type) {
+		snd_soc_write(codec, MSM8X16_WCD_A_ANALOG_MBHC_DBNC_TIMER, 0x78);
+		msleep(150);
+	    /*enable HS_US_EU_EN_GPIO */
+		gpio_direction_output(HS_US_EU_EN_GPIO, true);	
+		msleep(150);
+		//gpio_direction_output(EXT_SPK_AMP_HEADSET_GPIO, true);
 		/* Make sure MASTER_BIAS_CTL is enabled */
 		snd_soc_update_bits(codec,
 				    MSM8X16_WCD_A_ANALOG_MASTER_BIAS_CTL,
@@ -1309,6 +1351,7 @@ static void wcd_mbhc_swch_irq_handler(struct wcd_mbhc *mbhc)
 		wcd_mbhc_detect_plug_type(mbhc);
 	} else if ((mbhc->current_plug != MBHC_PLUG_TYPE_NONE)
 			&& !detection_type) {
+		snd_soc_write(codec, MSM8X16_WCD_A_ANALOG_MBHC_DBNC_TIMER, 0x98);
 		/* Disable external voltage source to micbias if present */
 		if (mbhc->mbhc_cb && mbhc->mbhc_cb->enable_mb_source)
 			mbhc->mbhc_cb->enable_mb_source(codec, false);
@@ -1322,6 +1365,7 @@ static void wcd_mbhc_swch_irq_handler(struct wcd_mbhc *mbhc)
 		if (mbhc->mbhc_cb && mbhc->mbhc_cb->set_cap_mode)
 			mbhc->mbhc_cb->set_cap_mode(codec, micbias1, false);
 		mbhc->btn_press_intr = false;
+
 		if (mbhc->current_plug == MBHC_PLUG_TYPE_HEADPHONE) {
 			wcd_mbhc_report_plug(mbhc, 0, SND_JACK_HEADPHONE);
 		} else if (mbhc->current_plug == MBHC_PLUG_TYPE_GND_MIC_SWAP) {
@@ -1359,6 +1403,9 @@ static void wcd_mbhc_swch_irq_handler(struct wcd_mbhc *mbhc)
 					0x06, 0x00);
 			wcd_mbhc_report_plug(mbhc, 0, SND_JACK_LINEOUT);
 		}
+		/*disable HS_US_EU_EN_GPIO */
+		gpio_direction_output(HS_US_EU_EN_GPIO, false);
+		gpio_direction_output(EXT_SPK_AMP_HEADSET_GPIO, false);
 	} else if (!detection_type) {
 		/* Disable external voltage source to micbias if present */
 		if (mbhc->mbhc_cb && mbhc->mbhc_cb->enable_mb_source)
@@ -1407,10 +1454,10 @@ static int wcd_mbhc_get_button_mask(u16 btn)
 		mask = SND_JACK_BTN_2;
 		break;
 	case 7:
-		mask = SND_JACK_BTN_3;
+		mask = SND_JACK_BTN_2;
 		break;
 	case 15:
-		mask = SND_JACK_BTN_4;
+		mask = SND_JACK_BTN_2;
 		break;
 	default:
 		break;
@@ -1974,6 +2021,7 @@ int wcd_mbhc_start(struct wcd_mbhc *mbhc,
 	/* update the mbhc config */
 	mbhc->mbhc_cfg = mbhc_cfg;
 
+	gpio_direction_output(EXT_SPK_AMP_HEADSET_GPIO, false);
 	if (!mbhc->mbhc_cfg->read_fw_bin ||
 	    (mbhc->mbhc_cfg->read_fw_bin && mbhc->mbhc_fw) ||
 	    (mbhc->mbhc_cfg->read_fw_bin && mbhc->mbhc_cal)) {
