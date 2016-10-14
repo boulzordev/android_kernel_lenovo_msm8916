@@ -4123,7 +4123,6 @@ static int msm8x16_wcd_device_up(struct snd_soc_codec *codec)
 {
 	struct msm8x16_wcd_priv *msm8x16_wcd_priv =
 		snd_soc_codec_get_drvdata(codec);
-	int ret = 0;
 	u32 reg;
 	dev_dbg(codec->dev, "%s: device up!\n", __func__);
 
