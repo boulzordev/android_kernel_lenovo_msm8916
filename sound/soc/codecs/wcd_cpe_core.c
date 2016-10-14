@@ -36,6 +36,8 @@
 #define CMI_CMD_TIMEOUT (10 * HZ)
 #define WCD_CPE_LSM_MAX_SESSIONS 1
 #define WCD_CPE_AFE_MAX_PORTS 2
+#define WCD_CPE_DRAM_SIZE 0x30000
+#define WCD_CPE_DRAM_OFFSET 0x50000
 #define AFE_SVC_EXPLICIT_PORT_START 1
 
 #define ELF_FLAG_EXECUTE (1 << 0)
@@ -170,17 +172,9 @@ static int wcd_cpe_collect_ramdump(struct wcd_cpe_core *core)
 	struct cpe_svc_mem_segment dump_seg;
 	int rc;
 
-	if (!core->cpe_ramdump_dev || !core->cpe_dump_v_addr ||
-	    core->hw_info.dram_size == 0) {
-		dev_err(core->dev,
-			"%s: Ramdump devices not set up, size = %zu\n",
-			__func__, core->hw_info.dram_size);
-		return -EINVAL;
-	}
-
 	dump_seg.type = CPE_SVC_DATA_MEM;
-	dump_seg.cpe_addr = core->hw_info.dram_offset;
-	dump_seg.size = core->hw_info.dram_size;
+	dump_seg.cpe_addr = WCD_CPE_DRAM_OFFSET;
+	dump_seg.size = WCD_CPE_DRAM_SIZE;
 	dump_seg.data = core->cpe_dump_v_addr;
 
 	dev_dbg(core->dev,
@@ -200,7 +194,7 @@ static int wcd_cpe_collect_ramdump(struct wcd_cpe_core *core)
 		__func__);
 
 	core->cpe_ramdump_seg.address = (unsigned long) core->cpe_dump_addr;
-	core->cpe_ramdump_seg.size = core->hw_info.dram_size;
+	core->cpe_ramdump_seg.size = WCD_CPE_DRAM_SIZE;
 	core->cpe_ramdump_seg.v_address = core->cpe_dump_v_addr;
 
 	rc = do_ramdump(core->cpe_ramdump_dev,
@@ -1629,7 +1623,6 @@ struct wcd_cpe_core *wcd_cpe_init(const char *img_fname,
 	char proc_name[WCD_CPE_STATE_MAX_LEN];
 	const char *cpe_name = "cpe";
 	const char *state_name = "_state";
-	const struct cpe_svc_hw_cfg *hw_info;
 	int id = 0;
 
 	if (wcd_cpe_validate_params(codec, params))
@@ -1739,19 +1732,6 @@ struct wcd_cpe_core *wcd_cpe_init(const char *img_fname,
 
 	wcd_cpe_debugfs_init(core);
 
-	hw_info = cpe_svc_get_hw_cfg(core->cpe_handle);
-	if (!hw_info) {
-		dev_err(core->dev,
-			"%s: hw info not available\n",
-			__func__);
-		goto schedule_dload_work;
-	} else {
-		core->hw_info.dram_offset = hw_info->DRAM_offset;
-		core->hw_info.dram_size = hw_info->DRAM_size;
-		core->hw_info.iram_offset = hw_info->IRAM_offset;
-		core->hw_info.iram_size = hw_info->IRAM_size;
-	}
-
 	/* Setup the ramdump device and buffer */
 	core->cpe_ramdump_dev = create_ramdump_device("cpe",
 						      core->dev);
@@ -1763,16 +1743,16 @@ struct wcd_cpe_core *wcd_cpe_init(const char *img_fname,
 	}
 
 	core->cpe_dump_v_addr = dma_alloc_coherent(core->dev,
-						   core->hw_info.dram_size,
+						   WCD_CPE_DRAM_SIZE,
 						   &core->cpe_dump_addr,
 						   GFP_KERNEL);
 	if (!core->cpe_dump_v_addr) {
 		dev_err(core->dev,
-			"%s: Failed to alloc memory for cpe dump, size = %zd\n",
-			__func__, core->hw_info.dram_size);
+			"%s: Failed to alloc memory for cpe dump, size = %d\n",
+			__func__, WCD_CPE_DRAM_SIZE);
 		goto schedule_dload_work;
 	} else {
-		memset(core->cpe_dump_v_addr, 0, core->hw_info.dram_size);
+		memset(core->cpe_dump_v_addr, 0, WCD_CPE_DRAM_SIZE);
 	}
 
 schedule_dload_work:
