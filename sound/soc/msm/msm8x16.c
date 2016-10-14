@@ -64,11 +64,6 @@ static struct delayed_work lineout_amp_dualmode;
 
 #define LPASS_CSR_GP_LPAIF_PRI_PCM_PRI_MODE_MUXSEL 0x07702008
 
-enum btsco_rates {
-	RATE_8KHZ_ID,
-	RATE_16KHZ_ID,
-};
-
 static int msm_btsco_rate = BTSCO_RATE_8KHZ;
 static int msm_btsco_ch = 1;
 
@@ -962,10 +957,10 @@ static int msm_btsco_rate_put(struct snd_kcontrol *kcontrol,
 				struct snd_ctl_elem_value *ucontrol)
 {
 	switch (ucontrol->value.integer.value[0]) {
-	case RATE_8KHZ_ID:
+	case 8000:
 		msm_btsco_rate = BTSCO_RATE_8KHZ;
 		break;
-	case RATE_16KHZ_ID:
+	case 16000:
 		msm_btsco_rate = BTSCO_RATE_16KHZ;
 		break;
 	default:
@@ -984,8 +979,7 @@ static const struct soc_enum msm_snd_enum[] = {
 	SOC_ENUM_SINGLE_EXT(3, lineout_text),
 };
 
-static const char *const btsco_rate_text[] = {"BTSCO_RATE_8KHZ",
-	"BTSCO_RATE_16KHZ"};
+static const char *const btsco_rate_text[] = {"8000", "16000"};
 static const struct soc_enum msm_btsco_enum[] = {
 	SOC_ENUM_SINGLE_EXT(2, btsco_rate_text),
 };

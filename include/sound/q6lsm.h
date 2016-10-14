@@ -173,16 +173,11 @@ struct lsm_cmd_set_params_conf {
 	struct lsm_param_min_confidence_levels	conf_payload;
 } __packed;
 
-struct lsm_cmd_set_params_opmode {
+struct lsm_cmd_set_opmode_connectport {
 	struct apr_hdr  msg_hdr;
 	struct lsm_set_params_hdr params_hdr;
-	struct lsm_param_op_mode op_mode;
-} __packed;
-
-struct lsm_cmd_set_connectport {
-	struct apr_hdr  msg_hdr;
-	struct lsm_set_params_hdr params_hdr;
-	struct lsm_param_connect_to_port connect_to_port;
+	struct lsm_param_connect_to_port	connect_to_port;
+	struct lsm_param_op_mode		op_mode;
 } __packed;
 
 struct lsm_cmd_poll_enable {
