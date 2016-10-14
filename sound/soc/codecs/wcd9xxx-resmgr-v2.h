@@ -46,8 +46,6 @@ struct wcd9xxx_resmgr_v2 {
 
 	const struct wcd_resmgr_cb *resmgr_cb;
 	int sido_input_src;
-
-	u8 intf_type;
 };
 
 #define WCD9XXX_V2_BG_CLK_LOCK(resmgr)			\
@@ -75,8 +73,7 @@ int wcd_resmgr_enable_master_bias(struct wcd9xxx_resmgr_v2 *resmgr);
 int wcd_resmgr_disable_master_bias(struct wcd9xxx_resmgr_v2 *resmgr);
 struct wcd9xxx_resmgr_v2 *wcd_resmgr_init(
 		struct wcd9xxx_core_resource *core_res,
-		struct snd_soc_codec *codec,
-		u8 intf_type);
+		struct snd_soc_codec *codec);
 void wcd_resmgr_remove(struct wcd9xxx_resmgr_v2 *resmgr);
 int wcd_resmgr_post_init(struct wcd9xxx_resmgr_v2 *resmgr,
 			 const struct wcd_resmgr_cb *resmgr_cb,
