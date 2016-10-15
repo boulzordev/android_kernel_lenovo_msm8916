@@ -15,7 +15,7 @@
 #include <linux/of_gpio.h>
 #include <linux/platform_device.h>
 #include <linux/device.h>
-#include <linux/pr_debug.h>
+#include <linux/printk.h>
 #include <linux/ratelimit.h>
 #include <linux/list.h>
 #include <linux/bitops.h>
