@@ -37,6 +37,9 @@ struct gpio_led_data {
 	u8 can_sleep;
 	u8 active_low;
 	u8 blinking;
+    unsigned long delay_on;
+    unsigned long delay_off;
+
         u8 global_blinking;
         u8 brightness;
 	int (*platform_gpio_blink_set)(unsigned gpio, int state,
@@ -44,11 +47,68 @@ struct gpio_led_data {
 };
 /*led light flag: r:4, g:2, b:1*/
 static int led_flag = 0;
-unsigned long delay_on = 500;
-unsigned long delay_off = 300;
 #if defined (WT_USE_FAN54015)
 extern int fan54015_getcharge_stat(void);
 #endif
+
+static ssize_t gpio_delay_on_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct led_classdev *led_cdev = dev_get_drvdata(dev);	
+    struct gpio_led_data *led_dat =
+		container_of(led_cdev, struct gpio_led_data, cdev);
+
+	return sprintf(buf, "%lu\n", led_dat->delay_on);
+}
+
+static ssize_t gpio_delay_on_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t n)
+{
+	struct led_classdev *led_cdev = dev_get_drvdata(dev);	
+    struct gpio_led_data *led_dat =
+		container_of(led_cdev, struct gpio_led_data, cdev);
+
+	unsigned long delay_on;
+	int ret;
+
+	ret = sscanf(buf, "%lu", &delay_on);
+	led_dat->delay_on = delay_on;
+
+	return n;
+}
+static DEVICE_ATTR(delay_on, 0644, gpio_delay_on_show,
+		gpio_delay_on_store);
+
+static ssize_t gpio_delay_off_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct led_classdev *led_cdev = dev_get_drvdata(dev);	
+    struct gpio_led_data *led_dat =
+		container_of(led_cdev, struct gpio_led_data, cdev);
+
+
+
+	return sprintf(buf, "%lu\n", led_dat->delay_off);
+}
+
+static ssize_t gpio_delay_off_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t n)
+{
+	struct led_classdev *led_cdev = dev_get_drvdata(dev);	
+    struct gpio_led_data *led_dat =
+		container_of(led_cdev, struct gpio_led_data, cdev);
+
+	unsigned long delay_off;
+	int ret;
+
+	ret = sscanf(buf, "%lu", &delay_off);
+	led_dat->delay_off = delay_off;
+
+	return n;
+}
+static DEVICE_ATTR(delay_off, 0644, gpio_delay_off_show,
+		gpio_delay_off_store);
+
 
 static void gpio_led_work(struct work_struct *work)
 {
@@ -149,7 +209,7 @@ static ssize_t blink_store(struct device *dev,
                
 	}
 	if (led_dat->blinking) {
-			led_blink_set(led_cdev,&delay_on,&delay_off);
+			led_blink_set(led_cdev,&led_dat->delay_on,&led_dat->delay_off);
                         led_dat->global_blinking=1;
                         led_dat->blinking = 0;
 		} else{
@@ -198,6 +258,8 @@ static int create_gpio_led(const struct gpio_led *template,
 	led_dat->can_sleep = gpio_cansleep(template->gpio);
 	led_dat->active_low = template->active_low;
 	led_dat->blinking = 0;
+    led_dat->delay_on = 500;
+    led_dat->delay_off = 300;
 	if (blink_set) {
 		led_dat->platform_gpio_blink_set = blink_set;
 		led_dat->cdev.blink_set = gpio_blink_set;
@@ -230,6 +292,8 @@ static int create_gpio_led(const struct gpio_led *template,
 
 	ret = led_classdev_register(parent, &led_dat->cdev);
         device_create_file(led_dat->cdev.dev, &dev_attr_blink);
+        device_create_file(led_dat->cdev.dev, &dev_attr_delay_on);
+        device_create_file(led_dat->cdev.dev, &dev_attr_delay_off);
 	if (ret < 0)
 		return ret;
 
