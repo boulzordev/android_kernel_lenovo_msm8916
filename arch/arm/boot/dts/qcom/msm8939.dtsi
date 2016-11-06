@@ -382,6 +382,12 @@
 		reg-names = "fuse-base";
 	};
 
+    sec_boot_fuse: secbootfuse@0x5c098 {
+        compatible = "qcom,sec-boot-fuse";
+        reg = <0x5c098 0x4>;
+        reg-names = "sec-boot-base";
+	};
+	
 	jtag_mm0: jtagmm@8fc000 {
 		compatible = "qcom,jtagv8-mm";
 		reg = <0x8fc000 0x1000>,

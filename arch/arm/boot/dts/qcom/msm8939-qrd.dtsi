@@ -112,11 +112,20 @@
 			gpio-key,wakeup;
 			debounce-interval = <15>;
 		};
+		home_key {
+			label = "home";
+			gpios = <&msm_gpio 108 0x1>;
+			linux,input-type = <1>;
+			linux,code = <102>;
+			gpio-key,wakeup;
+			debounce-interval = <15>;
+		};
 	};
 };
 
 &sdhc_1 {
 	vdd-supply = <&pm8916_l8>;
+	qcom,vdd-always-on; //heming@wt, for hynix flash sleep wake-up issue.
 	qcom,vdd-voltage-level = <2900000 2900000>;
 	qcom,vdd-current-level = <200 400000>;
 
@@ -157,7 +166,7 @@
 			1 &intc 0 221 0
 			2 &msm_gpio 38 0>;
 	interrupt-names = "hc_irq", "pwr_irq", "status_irq";
-	cd-gpios = <&msm_gpio 38 0x0>;
+	cd-gpios = <&msm_gpio 38 0x1>;
 
 	status = "ok";
 };
@@ -187,7 +196,7 @@
 };
 
 &apc_vreg_corner {
-	vdd-apc-supply = <&fan53555>;
+	/*vdd-apc-supply = <&ncp6335d>;*/
 	qcom,cpr-step-quotient = <26>;
 	qcom,cpr-apc-volt-step = <12500>;
 	qcom,cpr-up-threshold = <2>;
