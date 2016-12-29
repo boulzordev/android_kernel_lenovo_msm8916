@@ -47,6 +47,12 @@ bool is_display_on()
 
 DEFINE_LED_TRIGGER(bl_led_trigger);
 
+bool display_on = true;
+bool is_display_on()
+{
+	return display_on;
+}
+
 void mdss_dsi_panel_pwm_cfg(struct mdss_dsi_ctrl_pdata *ctrl)
 {
 	if (ctrl->pwm_pmi)
@@ -760,6 +766,8 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 	if (ctrl->off_cmds.cmd_cnt)
 		mdss_dsi_panel_cmds_send(ctrl, &ctrl->off_cmds);
 
+	display_on = false;
+
 end:
 	pinfo->blank_state = MDSS_PANEL_BLANK_BLANK;
 	pr_debug("%s:-\n", __func__);
@@ -776,6 +784,8 @@ static int mdss_dsi_panel_low_power_config(struct mdss_panel_data *pdata,
 		pr_err("%s: Invalid input data\n", __func__);
 		return -EINVAL;
 	}
+
+	display_on = true;
 
 	pinfo = &pdata->panel_info;
 	ctrl = container_of(pdata, struct mdss_dsi_ctrl_pdata,
