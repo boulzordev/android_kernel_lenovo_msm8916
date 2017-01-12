@@ -66,7 +66,9 @@ dtb-$(CONFIG_ARCH_MSM8916) += \
 	msm8939-qrd-wt88052_64.dtb \
 	msm8939-qrd-wt82918.dtb \
 	msm8939-v3.0-qrd-wt82918.dtb \
-	msm8939-qrd-wt82918hd.dtb
+	msm8939-qrd-wt82918hd.dtb \
+	msm8939-a40-soc616.dtb
+
 dtb-$(CONFIG_ARCH_MSM8226) += msm8226-sim.dtb \
 	msm8226-fluid.dtb \
 	msm8226-v1-cdp.dtb \
