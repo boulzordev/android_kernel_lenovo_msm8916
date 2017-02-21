@@ -29,6 +29,10 @@
 
 #define TIMEOUT_MS 300
 
+#ifdef CONFIG_WAKE_GESTURES
+#include <linux/input/wake_gestures.h>
+bool var_in_phone_call = false;
+#endif
 
 #define CMD_STATUS_SUCCESS 0
 #define CMD_STATUS_FAIL 1
@@ -5287,6 +5291,11 @@ int voc_end_voice_call(uint32_t session_id)
 	if (common.ec_ref_ext)
 		voc_set_ext_ec_ref(AFE_PORT_INVALID, false);
 
+#ifdef CONFIG_WAKE_GESTURES
+	var_in_phone_call = false;
+	pr_info("%s: set wake_helper var_in_phone_call: %s\n", __func__, (var_in_phone_call ? "true" : "false"));
+#endif
+
 	mutex_unlock(&v->lock);
 	return ret;
 }
@@ -5605,6 +5614,10 @@ int voc_start_voice_call(uint32_t session_id)
 		ret = -EINVAL;
 		goto fail;
 	}
+#ifdef CONFIG_WAKE_GESTURES
+	var_in_phone_call = true;
+	pr_info("%s: set wake_helper var_in_phone_call: %s\n", __func__, (var_in_phone_call ? "true" : "false"));
+#endif
 fail:
 	mutex_unlock(&v->lock);
 	return ret;
