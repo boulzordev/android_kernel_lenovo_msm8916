@@ -486,6 +486,7 @@ static int loopback_mclk_put(struct snd_kcontrol *kcontrol,
 	}
 	return ret;
 }
+
 static void msm8x16_ext_spk_delayed_enable(struct work_struct *work)
 {
     int i = 0;
@@ -1481,16 +1482,16 @@ static void *def_msm8x16_wcd_mbhc_cal(void)
 	 * 210-290 == Button 2
 	 * 360-680 == Button 3
 	 */
-	btn_low[0] = 75;
-	btn_high[0] = 75;
-	btn_low[1] = 150;
-	btn_high[1] = 150;
-	btn_low[2] = 237;
-	btn_high[2] = 237;
-	btn_low[3] = 450;
-	btn_high[3] = 450;
-	btn_low[4] = 500;
-	btn_high[4] = 500;
+	btn_low[0] = 87;
+	btn_high[0] = 87;
+	btn_low[1] = 255;
+	btn_high[1] = 237;
+	btn_low[2] = 325;
+	btn_high[2] = 400;
+	btn_low[3] = 425;
+	btn_high[3] = 575;
+	btn_low[4] = 525;
+	btn_high[4] = 735;
 
 	return msm8x16_wcd_cal;
 }
