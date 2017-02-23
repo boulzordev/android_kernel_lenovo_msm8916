@@ -106,3 +106,5 @@ ifeq ($(CONFIG_SENSORS_BMI160_I2C),y)
 endif
 obj-$(CONFIG_SENSORS_ELAN_EPL259x)      += epl259x.o
 obj-$(CONFIG_SENSORS_ST480)  += st480.o
+
+obj-$(CONFIG_POCKET_MOD)  += pocket_mod.o ps_detection_check.o
