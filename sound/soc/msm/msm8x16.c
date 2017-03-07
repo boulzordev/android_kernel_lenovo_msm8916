@@ -51,13 +51,12 @@
 #define DEFAULT_MCLK_RATE 9600000
 
 #define EXT_CLASS_D_EN_DELAY 13000
-#define EXT_CLASS_D_DIS_DELAY 3000
 #define EXT_CLASS_D_DELAY_DELTA 2000
 #define AW8155A_MODE 3
 
 static struct delayed_work lineout_amp_enable;
 static struct delayed_work lineout_amp_dualmode;
-//struct delayed_work lineout_amp_disable;
+static struct delayed_work lineout_amp_disable;
 
 #define WCD_MBHC_DEF_RLOADS 5
 
@@ -385,27 +384,6 @@ static int mi2s_rx_bit_format_put(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-static void msm8x16_ext_spk_control(u32 enable)
-{
-
-    if (enable) {
-        gpio_direction_output(EXT_SPK_AMP_GPIO, enable);
-	gpio_direction_output(EXT_SPK_AMP_GPIO_1, enable);
-        /* time takes enable the external power amplifier */
-        usleep_range(EXT_CLASS_D_EN_DELAY,
-            EXT_CLASS_D_EN_DELAY + EXT_CLASS_D_DELAY_DELTA);
-    } else {
-        gpio_direction_output(EXT_SPK_AMP_GPIO, enable);
-	gpio_direction_output(EXT_SPK_AMP_GPIO_1, enable);
-        /* time takes disable the external power amplifier */
-        usleep_range(EXT_CLASS_D_DIS_DELAY,
-            EXT_CLASS_D_DIS_DELAY + EXT_CLASS_D_DELAY_DELTA);
-    }
-
-    pr_debug("%s: %s external speaker PAs.\n", __func__,
-        enable ? "Enable" : "Disable");
-}
-
 static int loopback_mclk_get(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
@@ -529,6 +507,26 @@ static void msm8x16_ext_spk_delayed_dualmode(struct work_struct *work)
 
     pr_debug("%s: Enable external speaker PAs dualmode.\n", __func__);
 }
+
+static void msm8x16_ext_spk_delayed_disable(struct work_struct *work)
+{
+    int i = 0;
+	
+    /* Close the headset device */
+    gpio_direction_output(EXT_SPK_AMP_HEADSET_GPIO, false);
+    usleep_range(EXT_CLASS_D_EN_DELAY,
+        EXT_CLASS_D_EN_DELAY + EXT_CLASS_D_DELAY_DELTA);
+
+    /* Close external audio PA device */
+    for(i = 0; i < AW8155A_MODE; i++) {
+        gpio_direction_output(EXT_SPK_AMP_GPIO, false);
+	gpio_direction_output(EXT_SPK_AMP_GPIO_1, false);
+    }
+    usleep_range(EXT_CLASS_D_EN_DELAY,
+        EXT_CLASS_D_EN_DELAY + EXT_CLASS_D_DELAY_DELTA);
+
+    pr_debug("%s: Disable external speaker PAs.\n", __func__);
+}
 static int lineout_status_get(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
@@ -542,15 +540,17 @@ static int lineout_status_put(struct snd_kcontrol *kcontrol,
 	pr_debug("%s: external speaker PA mode:%d\n", __func__, state);
 
 	switch (state) {
+	case 0:
+		schedule_delayed_work(&lineout_amp_disable, msecs_to_jiffies(50));
+		break;
 	case 1:
 		schedule_delayed_work(&lineout_amp_enable, msecs_to_jiffies(50));
 		break;
-	case 0:
-		//schedule_delayed_work(&lineout_amp_disable, msecs_to_jiffies(5));
-		msm8x16_ext_spk_control(0);
-		break;
 	case 2:
 		schedule_delayed_work(&lineout_amp_dualmode, msecs_to_jiffies(50));
+		break;
+	case 3:
+		schedule_delayed_work(&lineout_amp_enable, msecs_to_jiffies(50));
 		break;
 	default:
 		pr_err("%s: Unexpected input value\n", __func__);
@@ -1542,6 +1542,7 @@ static int msm_audrx_init(struct snd_soc_pcm_runtime *rtd)
 	}
 	INIT_DELAYED_WORK(&lineout_amp_enable, msm8x16_ext_spk_delayed_enable);
 	INIT_DELAYED_WORK(&lineout_amp_dualmode, msm8x16_ext_spk_delayed_dualmode);
+	INIT_DELAYED_WORK(&lineout_amp_disable, msm8x16_ext_spk_delayed_disable);
 	return msm8x16_wcd_hs_detect(codec, &mbhc_cfg);
 }
 
