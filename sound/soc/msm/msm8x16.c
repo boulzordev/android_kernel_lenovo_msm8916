@@ -542,7 +542,7 @@ static int lineout_status_put(struct snd_kcontrol *kcontrol,
 	pr_debug("%s: external speaker PA mode:%d\n", __func__, state);
 
 	switch (state) {
-	case 1:
+        case 1:
 		schedule_delayed_work(&lineout_amp_enable, msecs_to_jiffies(50));
 		break;
 	case 0:
