@@ -3739,25 +3739,18 @@ static long _perf_ioctl(struct perf_event *event, unsigned int cmd,
 	return 0;
 }
 
-#ifdef CONFIG_COMPAT
-static long perf_compat_ioctl(struct file *file, unsigned int cmd,
-				unsigned long arg)
+static long perf_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
-	switch (_IOC_NR(cmd)) {
-	case _IOC_NR(PERF_EVENT_IOC_SET_FILTER):
-		/* Fix up pointer size (usually 4 -> 8 in 32-on-64-bit case */
-		if (_IOC_SIZE(cmd) == sizeof(compat_uptr_t)) {
-			cmd &= ~IOCSIZE_MASK;
-			cmd |= sizeof(void *) << IOCSIZE_SHIFT;
-		}
-		break;
-	}
-	return perf_ioctl(file, cmd, arg);
-}
-#else
-# define perf_compat_ioctl NULL
-#endif
+        struct perf_event *event = file->private_data;
+        struct perf_event_context *ctx;
+        long ret;
 
+        ctx = perf_event_ctx_lock(event);
+        ret = _perf_ioctl(event, cmd, arg);
+        perf_event_ctx_unlock(event, ctx);
+
+        return ret;
+}
 
 #ifdef CONFIG_COMPAT
 static long perf_compat_ioctl(struct file *file, unsigned int cmd,
