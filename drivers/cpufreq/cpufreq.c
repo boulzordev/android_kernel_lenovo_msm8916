@@ -187,7 +187,7 @@ int cpufreq_generic_init(struct cpufreq_policy *policy,
 	 * The driver only supports the SMP configuartion where all processors
 	 * share the clock and voltage and clock.
 	 */
-	cpumask_setall(policy->cpus);
+	//cpumask_setall(policy->cpus);
 
 	return 0;
 }
