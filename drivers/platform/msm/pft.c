@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -217,12 +217,14 @@ static int __init pft_lsm_init(struct pft_device *dev)
 		ret = register_security(&pft_security_ops);
 		if (ret) {
 			pr_err("pft lsm registeration failed, ret=%d.\n", ret);
-			return 0;
+			return ret;
 		}
+
 		dev->is_chosen_lsm = true;
 		pr_debug("pft is the chosen lsm, registered sucessfully !\n");
 	} else {
-		pr_debug("pft is not the chosen lsm.\n");
+		pr_err("pft is not the chosen lsm.\n");
+		return -ENODEV;
 	}
 
 	return 0;
@@ -276,7 +278,7 @@ static char *inode_to_filename(struct inode *inode)
 	if (hlist_empty(&inode->i_dentry))
 		return "unknown";
 
-	dentry = hlist_entry(inode->i_dentry.first, struct dentry, d_alias);
+	dentry = hlist_entry(inode->i_dentry.first, struct dentry, d_u.d_alias);
 	filename = dentry->d_iname;
 
 	return filename;
