@@ -30,7 +30,7 @@ struct rock_state {
 	int cont_size;
 	int cont_extent;
 	int cont_offset;
-	int cont_loops;
+        int cont_loops;
 	struct inode *inode;
 };
 
@@ -105,12 +105,12 @@ static int rock_continue(struct rock_state *rs)
 
 		rs->buffer = kmalloc(rs->cont_size, GFP_KERNEL);
 		if (!rs->buffer) {
-			ret = -ENOMEM;
-			goto out;
+		ret = -ENOMEM;
+		goto out;
 		}
 		ret = -EIO;
-		if (++rs->cont_loops >= RR_MAX_CE_ENTRIES)
-			goto out;
+                if (++rs->cont_loops >= RR_MAX_CE_ENTRIES)
+                goto out;
 		bh = sb_bread(rs->inode->i_sb, rs->cont_extent);
 		if (bh) {
 			memcpy(rs->buffer, bh->b_data + rs->cont_offset,
