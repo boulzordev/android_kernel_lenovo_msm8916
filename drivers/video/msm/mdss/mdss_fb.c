@@ -2,7 +2,7 @@
  * Core MDSS framebuffer driver.
  *
  * Copyright (C) 2007 Google Incorporated
- * Copyright (c) 2008-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2008-2017, The Linux Foundation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -54,6 +54,7 @@
 #include "mdss_dsi.h"
 #include "mdss_mdp.h"
 #include "mdss_fb.h"
+#include "mdss_mdp.h"
 #include "mdss_mdp_splash_logo.h"
 #include "mdss_livedisplay.h"
 
@@ -71,6 +72,12 @@
 
 #define BLANK_FLAG_LP	FB_BLANK_VSYNC_SUSPEND
 #define BLANK_FLAG_ULP	FB_BLANK_NORMAL
+
+#define MDSS_BRIGHT_TO_BL_DIM(out, v) do {\
+			out = (12*v*v+1393*v+3060)/4465;\
+			} while (0)
+bool backlight_dimmer = false;
+module_param(backlight_dimmer, bool, 0755);
 
 static struct fb_info *fbi_list[MAX_FBI_LIST];
 static int fbi_list_index;
@@ -271,7 +278,7 @@ static void mdss_fb_set_bl_brightness(struct led_classdev *led_cdev,
 	#if 1
 		//defualt setting for MMI, 0 ~ 255, Driver: 8 ~ 255
 		if(mfd->panel_info->bl_min == 1)mfd->panel_info->bl_min = 8;//for the case of set bl_min to 1
-		WINGTECH_MDSS_BRIGHT_TO_BL(bl_lvl, value, mfd->panel_info->bl_min, mfd->panel_info->bl_max, 
+		WINGTECH_MDSS_BRIGHT_TO_BL(bl_lvl, value, mfd->panel_info->bl_min, mfd->panel_info->bl_max,
 		brightness_min, mfd->panel_info->brightness_max);
 
 		if(bl_lvl && !value)bl_lvl = 0;
@@ -279,7 +286,16 @@ static void mdss_fb_set_bl_brightness(struct led_classdev *led_cdev,
 		MDSS_BRIGHT_TO_BL(bl_lvl, value, mfd->panel_info->bl_max,
 				mfd->panel_info->brightness_max);
 	 #endif
-	/* heming@wingtech.com, 20140731, customize the backlight by wingtech defined, end */ 
+	/* heming@wingtech.com, 20140731, customize the backlight by wingtech defined, end */
+	if (backlight_dimmer) {
+		MDSS_BRIGHT_TO_BL_DIM(bl_lvl, value);
+	} else {
+		/* This maps android backlight level 0 to 255 into
+		   driver backlight level 0 to bl_max with rounding */
+		MDSS_BRIGHT_TO_BL(bl_lvl, value, mfd->panel_info->bl_max,
+					mfd->panel_info->brightness_max);
+	}
+
 	if (!bl_lvl && value)
 		bl_lvl = 1;
 
@@ -708,6 +724,37 @@ static ssize_t mdss_fb_get_doze_mode(struct device *dev,
 	return scnprintf(buf, PAGE_SIZE, "%d\n", mfd->doze_mode);
 }
 
+static ssize_t mdss_fb_set_idle_pc(struct device *dev,
+ struct device_attribute *attr, const char *buf, size_t count)
+{
+ struct fb_info *fbi = dev_get_drvdata(dev);
+ struct msm_fb_data_type *mfd = fbi->par;
+ struct mdss_data_type *mdata = mfd_to_mdata(mfd);
+ int rc, idle_pc;
+
+ rc = kstrtoint(buf, 10, &idle_pc);
+ if (rc) {
+ pr_err("kstrtoint failed. rc=%d\n", rc);
+ return rc;
+ }
+
+ mdata->idle_pc_enabled = idle_pc ? true : false;
+ pr_info("idle power collapse %s\n",
+ mdata->idle_pc_enabled ? "enabled" : "disabled");
+
+ return count;
+}
+
+static ssize_t mdss_fb_get_idle_pc(struct device *dev,
+ struct device_attribute *attr, char *buf)
+{
+ struct fb_info *fbi = dev_get_drvdata(dev);
+ struct msm_fb_data_type *mfd = fbi->par;
+ struct mdss_data_type *mdata = mfd_to_mdata(mfd);
+
+ return scnprintf(buf, PAGE_SIZE, "%d\n", mdata->idle_pc_enabled);
+}
+
 static DEVICE_ATTR(msm_fb_type, S_IRUGO, mdss_fb_get_type, NULL);
 static DEVICE_ATTR(msm_fb_split, S_IRUGO | S_IWUSR, mdss_fb_show_split,
 					mdss_fb_store_split);
@@ -724,6 +771,9 @@ static DEVICE_ATTR(always_on, S_IRUGO | S_IWUSR | S_IWGRP,
 	mdss_fb_get_doze_mode, mdss_fb_set_doze_mode);
 static DEVICE_ATTR(msm_fb_panel_status, S_IRUGO,
 	mdss_fb_get_panel_status, NULL);
+
+static DEVICE_ATTR(idle_pc, S_IRUGO | S_IWUSR | S_IWGRP, mdss_fb_get_idle_pc, mdss_fb_set_idle_pc);
+
 static struct attribute *mdss_fb_attrs[] = {
 	&dev_attr_msm_fb_type.attr,
 	&dev_attr_msm_fb_split.attr,
@@ -735,6 +785,7 @@ static struct attribute *mdss_fb_attrs[] = {
 	&dev_attr_msm_fb_thermal_level.attr,
 	&dev_attr_always_on.attr,
 	&dev_attr_msm_fb_panel_status.attr,
+	&dev_attr_idle_pc.attr,
 	NULL,
 };
 
@@ -3331,8 +3382,6 @@ static int mdss_fb_handle_buf_sync_ioctl(struct msm_sync_pt_data *sync_pt_data,
 		goto buf_sync_err_2;
 	}
 
-	sync_fence_install(rel_fence, rel_fen_fd);
-
 	ret = copy_to_user(buf_sync->rel_fen_fd, &rel_fen_fd, sizeof(int));
 	if (ret) {
 		pr_err("%s: copy_to_user failed\n", sync_pt_data->fence_name);
@@ -3369,8 +3418,6 @@ static int mdss_fb_handle_buf_sync_ioctl(struct msm_sync_pt_data *sync_pt_data,
 		goto buf_sync_err_3;
 	}
 
-	sync_fence_install(retire_fence, retire_fen_fd);
-
 	ret = copy_to_user(buf_sync->retire_fen_fd, &retire_fen_fd,
 			sizeof(int));
 	if (ret) {
@@ -3381,7 +3428,10 @@ static int mdss_fb_handle_buf_sync_ioctl(struct msm_sync_pt_data *sync_pt_data,
 		goto buf_sync_err_3;
 	}
 
+	sync_fence_install(retire_fence, retire_fen_fd);
+
 skip_retire_fence:
+	sync_fence_install(rel_fence, rel_fen_fd);
 	mutex_unlock(&sync_pt_data->sync_mutex);
 
 	if (buf_sync->flags & MDP_BUF_SYNC_FLAG_WAIT)

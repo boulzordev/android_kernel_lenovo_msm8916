@@ -246,8 +246,9 @@ static int soc_compr_free(struct snd_compr_stream *cstream)
 					SND_SOC_DAPM_STREAM_STOP);
 		} else {
 			rtd->pop_wait = 1;
-			schedule_delayed_work(&rtd->delayed_work,
-				msecs_to_jiffies(rtd->pmdown_time));
+			queue_delayed_work(system_power_efficient_wq,
+					   &rtd->delayed_work,
+					   msecs_to_jiffies(rtd->pmdown_time));
 		}
 	} else {
 		/* capture streams can be powered down now */
@@ -569,6 +570,11 @@ static int soc_compr_set_params_fe(struct snd_compr_stream *cstream,
 				cstream, &async_domain);
 			} else {
 				be_list[j++] = be;
+				if (j == DPCM_MAX_BE_USERS) {
+					dev_dbg(fe->dev,
+						"ASoC: MAX backend users!\n");
+					break;
+				}
 			}
 		}
 		for (i = 0; i < j; i++) {
