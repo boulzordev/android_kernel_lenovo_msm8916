@@ -910,5 +910,12 @@ config SENSORS_ST480
 	  To compile this driver as a module, choose M here: the
 	  module will be called akm09911.
 
+config POCKET_MOD
+	bool "Pocket Mod for Wake Gestures"
+	depends on WAKE_GESTURES
+	default n
+	help
+	  Say Y here to enable Pocket Mod.
+
 endif
 

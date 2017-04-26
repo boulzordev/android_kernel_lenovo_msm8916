@@ -41,6 +41,10 @@
 #include <linux/platform_device.h>
 
 #include <linux/hardware_info.h>
+
+#ifdef CONFIG_POCKET_MOD
+#include <linux/input/pocket_mod.h>
+#endif
 /******************************************************************************
 * configuration
 *******************************************************************************/
@@ -5261,6 +5265,45 @@ static int __init epl_sensor_init(void)
 {
     return i2c_add_driver(&epl_sensor_driver);
 }
+
+#ifdef CONFIG_POCKET_MOD
+int epl259x_pocket_detection_check(void)
+{
+
+    int ps_val;
+
+    struct epl_sensor_priv *epld = epl_sensor_obj;
+
+    if(!epl_sensor_obj)
+    {
+        LOG_ERR("epl_sensor_obj is null!!\n");
+        return -1;
+    }
+    else
+    {
+
+        // enable ps sensor:
+        epld->enable_pflag = 1;
+        epl_sensor_update_mode(epld->client);
+        // ps sensor enabled
+
+        msleep(50);
+
+        mutex_lock(&sensor_mutex);
+        epl_sensor_read_ps(epld->client);
+        mutex_unlock(&sensor_mutex);
+
+        ps_val = epl_sensor.ps.data.data;
+
+        // disable ps sensor:
+        epld->enable_pflag = 0;
+        cancel_delayed_work(&epld->dynk_thd_polling_work);
+        epl_sensor_update_mode(epld->client);
+        // ps sensor disabled
+    return (ps_val);
+    }
+}
+#endif
 
 static void __exit  epl_sensor_exit(void)
 {
