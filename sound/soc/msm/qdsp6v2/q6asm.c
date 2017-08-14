@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2017, The Linux Foundation. All rights reserved.
  * Author: Brian Swetland <swetland@google.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -2320,10 +2320,6 @@ static int __q6asm_open_write(struct audio_client *ac, uint32_t format,
 
 	open.postprocopo_id = q6asm_get_asm_topology();
 
-	/* For DTS EAGLE only, force 24 bit */
-	if (open.postprocopo_id == ASM_STREAM_POSTPROC_TOPO_ID_DTS_HPX)
-		open.bits_per_sample = 24;
-
 	/*
 	 * For Gapless playback it will use the same session for next stream,
 	 * So use the same topology
@@ -2477,6 +2473,7 @@ static int __q6asm_open_read_write(struct audio_client *ac, uint32_t rd_format,
 	open.postprocopo_id = overwrite_topology ?
 			      topology : open.postprocopo_id;
 	ac->topology = open.postprocopo_id;
+
 	switch (wr_format) {
 	case FORMAT_LINEAR_PCM:
 	case FORMAT_MULTI_CHANNEL_LINEAR_PCM:
