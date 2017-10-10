@@ -1,4 +1,5 @@
-/* Copyright (c) 2012-2014, 2016, 2017 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2014, 2016-2017 The Linux Foundation. All rights 
+ * reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -23,12 +24,8 @@
 #include <sound/q6audio-v2.h>
 #include <sound/q6afe-v2.h>
 #include <sound/audio_cal_utils.h>
-
 #include "msm-dts-srs-tm-config.h"
-
-
 #include <sound/asound.h>
-#include "msm-dts-eagle.h"
 
 #define TIMEOUT_MS 1000
 
@@ -2027,17 +2024,6 @@ int adm_open(int port_id, int path, int rate, int channel_mode, int topology,
 		}
 	}
 
-	if ((topology == ADM_CMD_COPP_OPEN_TOPOLOGY_ID_DTS_HPX_0 ||
-	     topology == ADM_CMD_COPP_OPEN_TOPOLOGY_ID_DTS_HPX_1) &&
-	    !perf_mode) {
-		int res;
-		atomic_set(&this_adm.mem_map_index, ADM_DTS_EAGLE);
-		msm_dts_ion_memmap(&this_adm.outband_memmap);
-		res = adm_memory_map_regions(&this_adm.outband_memmap.paddr, 0,
-				(uint32_t *)&this_adm.outband_memmap.size, 1);
-		if (res < 0)
-			pr_err("%s: DTS_EAGLE mmap did not work!", __func__);
-	}
 	if (this_adm.copp.adm_delay[port_idx][copp_idx] &&
 		perf_mode == LEGACY_PCM_MODE) {
 		atomic_set(&this_adm.copp.adm_delay_stat[port_idx][copp_idx],
@@ -2406,18 +2392,6 @@ int adm_close(int port_id, int perf_mode, int copp_idx)
 			} else {
 				atomic_set(&this_adm.mem_map_handles
 					   [ADM_SRS_TRUMEDIA], 0);
-			}
-		}
-
-		if ((!perf_mode) && (this_adm.outband_memmap.paddr != 0)) {
-			atomic_set(&this_adm.mem_map_index, ADM_DTS_EAGLE);
-			ret = adm_memory_unmap_regions();
-			if (ret < 0) {
-				pr_err("%s: adm mem unmmap err %d",
-					__func__, ret);
-			} else {
-				atomic_set(&this_adm.mem_map_handles
-					   [ADM_DTS_EAGLE], 0);
 			}
 		}
 
@@ -2790,10 +2764,6 @@ static int adm_init_cal_data(void)
 		{NULL, NULL, cal_utils_match_buf_num} },
 
 		{{ADM_RTAC_APR_CAL_TYPE,
-		{NULL, NULL, NULL, NULL, NULL, NULL} },
-		{NULL, NULL, cal_utils_match_buf_num} },
-
-		{{DTS_EAGLE_CAL_TYPE,
 		{NULL, NULL, NULL, NULL, NULL, NULL} },
 		{NULL, NULL, cal_utils_match_buf_num} },
 

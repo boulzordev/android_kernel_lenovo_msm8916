@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -232,7 +232,7 @@ static int32_t aprv2_core_fn_q(struct apr_client_data *data, void *priv)
 			generic_get_data->valid = 1;
 			generic_get_data->size_in_ints =
 				data->payload_size/sizeof(int);
-			pr_debug("DTS_EAGLE_CORE callback size = %i\n",
+			pr_debug("callback size = %i\n",
 				 data->payload_size);
 			memcpy(generic_get_data->ints, data->payload,
 				data->payload_size);
