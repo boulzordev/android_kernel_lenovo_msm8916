@@ -130,7 +130,7 @@ struct regmap {
 	unsigned long *cache_present;
 	unsigned int cache_present_nbits;
 
-	struct reg_default *patch;
+	struct reg_sequence *patch;
 	int patch_regs;
 
 	/* if set, converts bulk rw to single rw */
@@ -229,3 +229,4 @@ extern struct regcache_ops regcache_lzo_ops;
 extern struct regcache_ops regcache_flat_ops;
 
 #endif
+

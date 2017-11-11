@@ -111,8 +111,10 @@ enum {
 	MODE_UPDATE_ALL		= 0xFFF,
 };
 
-void mdss_livedisplay_update(struct mdss_livedisplay_ctx *mlc, uint32_t updated);
-int mdss_livedisplay_parse_dt(struct device_node *np, struct mdss_panel_info *pinfo);
+void mdss_livedisplay_update(struct mdss_livedisplay_ctx *mlc,
+			     uint32_t updated);
+int mdss_livedisplay_parse_dt(struct device_node *np,
+			      struct mdss_panel_info *pinfo);
 int mdss_livedisplay_create_sysfs(struct msm_fb_data_type *mfd);
 
 static inline bool is_cabc_cmd(uint32_t value)
@@ -123,15 +125,16 @@ static inline bool is_cabc_cmd(uint32_t value)
 			(value & MODE_CABC_COLOR_ENHANCE);
 }
 
-static inline struct mdss_livedisplay_ctx* get_ctx(struct msm_fb_data_type *mfd)
+static inline struct mdss_livedisplay_ctx *get_ctx(struct msm_fb_data_type *mfd)
 {
-    return mfd->panel_info->livedisplay;
+	return mfd->panel_info->livedisplay;
 }
 
-static inline struct mdss_dsi_ctrl_pdata* get_ctrl(struct msm_fb_data_type *mfd)
+static inline struct mdss_dsi_ctrl_pdata *get_ctrl(struct msm_fb_data_type *mfd)
 {
-    struct mdss_panel_data *pdata = dev_get_platdata(&mfd->pdev->dev);
-    return container_of(pdata, struct mdss_dsi_ctrl_pdata, panel_data);
+	struct mdss_panel_data *pdata = dev_get_platdata(&mfd->pdev->dev);
+	return container_of(pdata, struct mdss_dsi_ctrl_pdata, panel_data);
 }
 
 #endif
+

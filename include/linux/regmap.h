@@ -47,6 +47,20 @@ struct reg_default {
 	unsigned int def;
 };
 
+/**
+ * Register/value pairs for sequences of writes with an optional delay in
+ * microseconds to be applied after each write.
+ *
+ * @reg: Register address.
+ * @def: Register value.
+ * @delay_us: Delay to be applied after the register write in microseconds
+ */
+struct reg_sequence {
+	unsigned int reg;
+	unsigned int def;
+	unsigned int delay_us;
+};
+
 #ifdef CONFIG_REGMAP
 
 enum regmap_endian {
@@ -400,7 +414,7 @@ void regcache_cache_only(struct regmap *map, bool enable);
 void regcache_cache_bypass(struct regmap *map, bool enable);
 void regcache_mark_dirty(struct regmap *map);
 
-int regmap_register_patch(struct regmap *map, const struct reg_default *regs,
+int regmap_register_patch(struct regmap *map, const struct reg_sequence *regs,
 			  int num_regs);
 
 static inline bool regmap_reg_in_range(unsigned int reg,
@@ -601,3 +615,5 @@ static inline struct regmap *dev_get_regmap(struct device *dev,
 #endif
 
 #endif
+
+

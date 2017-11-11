@@ -123,3 +123,4 @@ struct vb2_queue *msm_get_stream_vb2q(unsigned int session_id,
 struct msm_stream *msm_get_stream_from_vb2q(struct vb2_queue *q);
 struct msm_session *msm_session_find(unsigned int session_id);
 #endif /*_MSM_H */
+

@@ -17,6 +17,7 @@
 #include <linux/err.h>
 #include <linux/rbtree.h>
 #include <linux/sched.h>
+#include <linux/delay.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/regmap.h>
@@ -1586,7 +1587,7 @@ int regmap_bulk_read(struct regmap *map, unsigned int reg, void *val,
 					  &ival);
 			if (ret != 0)
 				return ret;
-			memcpy(val + (i * val_bytes), &ival, val_bytes);
+			map->format.format_val(val + (i * val_bytes), ival, 0);
 		}
 	}
 
@@ -1749,7 +1750,7 @@ EXPORT_SYMBOL_GPL(regmap_async_complete);
  * corrections to be applied to the device defaults on startup, such
  * as the updates some vendors provide to undocumented registers.
  */
-int regmap_register_patch(struct regmap *map, const struct reg_default *regs,
+int regmap_register_patch(struct regmap *map, const struct reg_sequence *regs,
 			  int num_regs)
 {
 	int i, ret;
@@ -1775,10 +1776,10 @@ int regmap_register_patch(struct regmap *map, const struct reg_default *regs,
 		}
 	}
 
-	map->patch = kcalloc(num_regs, sizeof(struct reg_default), GFP_KERNEL);
+	map->patch = kcalloc(num_regs, sizeof(struct reg_sequence), GFP_KERNEL);
 	if (map->patch != NULL) {
 		memcpy(map->patch, regs,
-		       num_regs * sizeof(struct reg_default));
+		       num_regs * sizeof(struct reg_sequence));
 		map->patch_regs = num_regs;
 	} else {
 		ret = -ENOMEM;
@@ -1815,3 +1816,4 @@ static int __init regmap_initcall(void)
 	return 0;
 }
 postcore_initcall(regmap_initcall);
+
