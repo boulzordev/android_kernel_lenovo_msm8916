@@ -659,3 +659,4 @@ int regcache_sync_block(struct regmap *map, void *block,
 		return regcache_sync_block_single(map, block, block_base,
 						  start, end);
 }
+

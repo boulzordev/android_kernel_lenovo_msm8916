@@ -1174,3 +1174,4 @@ module_init(msm_init);
 module_exit(msm_exit);
 MODULE_DESCRIPTION("MSM V4L2 Camera");
 MODULE_LICENSE("GPL v2");
+

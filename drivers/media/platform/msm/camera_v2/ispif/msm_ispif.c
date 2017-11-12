@@ -1553,3 +1553,4 @@ module_init(msm_ispif_init_module);
 module_exit(msm_ispif_exit_module);
 MODULE_DESCRIPTION("MSM ISP Interface driver");
 MODULE_LICENSE("GPL v2");
+

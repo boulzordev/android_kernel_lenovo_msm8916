@@ -42,13 +42,21 @@ struct mnt_namespace;
  * flag, consider how it interacts with shared mounts.
  */
 #define MNT_SHARED_MASK	(MNT_UNBINDABLE)
-#define MNT_PROPAGATION_MASK	(MNT_SHARED | MNT_UNBINDABLE)
+#define MNT_USER_SETTABLE_MASK  (MNT_NOSUID | MNT_NODEV | MNT_NOEXEC \
+				 | MNT_NOATIME | MNT_NODIRATIME | MNT_RELATIME \
+				 | MNT_READONLY)
+
+#define MNT_ATIME_MASK (MNT_NOATIME | MNT_NODIRATIME | MNT_RELATIME )
 
 #define MNT_INTERNAL_FLAGS (MNT_SHARED | MNT_WRITE_HOLD | MNT_INTERNAL | \
 			    MNT_MARKED)
 
 #define MNT_INTERNAL	0x4000
 
+#define MNT_LOCK_ATIME		0x040000
+#define MNT_LOCK_NOEXEC		0x080000
+#define MNT_LOCK_NOSUID		0x100000
+#define MNT_LOCK_NODEV		0x200000
 #define MNT_LOCK_READONLY	0x400000
 #define MNT_MARKED		0x4000000
 
@@ -83,3 +91,4 @@ extern void mark_mounts_for_expiry(struct list_head *mounts);
 extern dev_t name_to_dev_t(char *name);
 
 #endif /* _LINUX_MOUNT_H */
+
